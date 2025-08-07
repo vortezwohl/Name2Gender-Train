@@ -46,6 +46,7 @@ def encode(text: str, train: bool = True):
     return ENCODER.encode(text)
 
 
+os.makedirs('./data', exist_ok=True)
 if os.path.exists('./data/train_loader.pkl') and os.path.exists('./data/valid_loader.pkl'):
     with open('./data/train_loader.pkl', 'rb') as f:
         train_dataset_loader = pickle.load(f)
