@@ -76,7 +76,7 @@ try:
                 with torch.no_grad():
                     model.eval()
                     outputs = model.forward(batch_texts)
-                    loss = loss_function(outputs, batch_labels) + model.elastic_net(alpha=alpha, rho=rho)
+                    loss = loss_function(outputs, batch_labels)
                     total_valid_loss += loss.item()
                     model.train()
             print(f"Epoch {epoch + 1}/{num_epochs} | "
