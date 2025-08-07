@@ -54,7 +54,7 @@ if os.path.exists('./data/train_loader.pkl') and os.path.exists('./data/valid_lo
         valid_dataset_loader = pickle.load(f)
 else:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_ratio = 0.85
+    train_ratio = 0.9
     batch_size = 32
     all_texts = male_names + female_names
     text_embeddings = [encode(x) for x in all_texts]
@@ -81,7 +81,6 @@ acc_train_loss = 0.
 acc_valid_loss = 0.
 eval_interval = 2000
 log_interval = 200
-valid_log_interval = 50
 
 
 writer = SummaryWriter()
@@ -89,7 +88,7 @@ alpha = 1e-4
 rho = 0.2
 num_epochs = 500
 train_loss_threshold = .0
-valid_loss_threshold = .275
+valid_loss_threshold = .0
 loss_function = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=2e-6)
 
@@ -117,11 +116,11 @@ try:
                         outputs = model.forward(batch_texts)
                         loss = loss_function(outputs, batch_labels)
                         acc_valid_loss += loss.item()
-                        if valid_step % valid_log_interval == 0 and valid_step > 0:
-                            if acc_valid_loss / valid_log_interval <= valid_loss_threshold:
+                        if valid_step % len(valid_dataset_loader) == 0 and valid_step > 0:
+                            if acc_valid_loss / len(valid_dataset_loader) <= valid_loss_threshold:
                                 raise KeyboardInterrupt
-                            writer.add_scalar('valid/loss', acc_valid_loss / valid_log_interval, valid_step)
-                            print(f'- Valid Step {valid_step} Loss {acc_valid_loss / valid_log_interval}', flush=True)
+                            writer.add_scalar('valid/loss', acc_valid_loss / len(valid_dataset_loader), valid_step)
+                            print(f'- Valid Step {valid_step} Loss {acc_valid_loss / len(valid_dataset_loader)}', flush=True)
                             acc_valid_loss = 0.
                         valid_step += 1
                 model.train()
