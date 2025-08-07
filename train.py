@@ -111,11 +111,12 @@ try:
                     valid_step += 1
             model.train()
 except KeyboardInterrupt:
-    model.save(f'{int(time.time())}-{model_name}', model_dir='checkpoint')
     acc_count = .0
     model.eval()
     with torch.no_grad():
         for i, name in enumerate(test_names):
             if round(model(encode(name)).item()) == test_genders[i]:
                 acc_count += 1.
-    print(f'Accuracy: {acc_count / len(test_names):.4f}%', flush=True)
+    acc = 100 * (acc_count / len(test_names))
+    print(f'Accuracy: {acc:.4f}%', flush=True)
+    model.save(f'{int(time.time())}-ACC={acc:.2f}-{model_name}', model_dir='checkpoint')
