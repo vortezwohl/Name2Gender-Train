@@ -14,11 +14,6 @@ model = load_model(model_name, dtype=torch.float32)
 print(model)
 
 
-def encode(text: str):
-    print('\rEncoding:', text, end='')
-    return ENCODER.encode(text)
-
-
 ds = load_dataset("erickrribeiro/gender-by-name")
 train_dataset, test_dataset = ds['train'], ds['test']
 
@@ -34,6 +29,16 @@ for i, name in enumerate(train_names):
         female_names.append(name)
     else:
         male_names.append(name)
+
+encoding_count = 0
+
+
+def encode(text: str):
+    global encoding_count
+    encoding_count += 1
+    print(f'\rEncoding ({encoding_count}/{len(train_names)}):', text, end='')
+    return ENCODER.encode(text)
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 train_ratio = 0.85
