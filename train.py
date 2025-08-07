@@ -1,3 +1,4 @@
+import os.path
 import pickle
 import time
 
@@ -45,29 +46,33 @@ def encode(text: str, train: bool = True):
     return ENCODER.encode(text)
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-train_ratio = 0.85
-batch_size = 32
-all_texts = male_names + female_names
-text_embeddings = [encode(x) for x in all_texts]
-feature_dim = text_embeddings[0].shape[-1]
-dtype = text_embeddings[0].dtype
-labels = ([torch.tensor([1.], dtype=dtype, device=device) for _ in range(len(male_names))]
-          + [torch.tensor([.0], dtype=dtype, device=device) for _ in range(len(female_names))])
-inputs = torch.stack(text_embeddings).to(device)
-labels = torch.stack(labels).to(device)
-dataset_size = len(labels)
-train_size = int(train_ratio * dataset_size)
-train_dataset = TensorDataset(inputs[:train_size], labels[:train_size])
-valid_dataset = TensorDataset(inputs[train_size:], labels[train_size:])
-train_dataset_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-valid_dataset_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
-
-with open('./data/train_loader.pkl', 'wb') as f:
-    pickle.dump(train_dataset_loader, f)
-
-with open('./data/valid_loader.pkl', 'wb') as f:
-    pickle.dump(valid_dataset_loader, f)
+if os.path.exists('./data/train_loader.pkl') and os.path.exists('./data/valid_loader.pkl'):
+    with open('./data/train_loader.pkl', 'rb') as f:
+        train_dataset_loader = pickle.load(f)
+    with open('./data/valid_loader.pkl', 'rb') as f:
+        valid_dataset_loader = pickle.load(f)
+else:
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    train_ratio = 0.85
+    batch_size = 32
+    all_texts = male_names + female_names
+    text_embeddings = [encode(x) for x in all_texts]
+    feature_dim = text_embeddings[0].shape[-1]
+    dtype = text_embeddings[0].dtype
+    labels = ([torch.tensor([1.], dtype=dtype, device=device) for _ in range(len(male_names))]
+              + [torch.tensor([.0], dtype=dtype, device=device) for _ in range(len(female_names))])
+    inputs = torch.stack(text_embeddings).to(device)
+    labels = torch.stack(labels).to(device)
+    dataset_size = len(labels)
+    train_size = int(train_ratio * dataset_size)
+    train_dataset = TensorDataset(inputs[:train_size], labels[:train_size])
+    valid_dataset = TensorDataset(inputs[train_size:], labels[train_size:])
+    train_dataset_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    valid_dataset_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
+    with open('./data/train_loader.pkl', 'wb') as f:
+        pickle.dump(train_dataset_loader, f)
+    with open('./data/valid_loader.pkl', 'wb') as f:
+        pickle.dump(valid_dataset_loader, f)
 
 train_step = 0
 valid_step = 0
