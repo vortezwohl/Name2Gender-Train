@@ -4,6 +4,7 @@ import time
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.tensorboard import SummaryWriter
 from datasets import load_dataset
 
 from name2gender.model import ENCODER, load_model
@@ -51,13 +52,14 @@ with open('./data/train_loader.pkl', 'wb') as f:
 with open('./data/valid_loader.pkl', 'wb') as f:
     pickle.dump(valid_dataset_loader, f)
 
+writer = SummaryWriter()
 alpha = 1e-4
 rho = 0.2
 num_epochs = 500
 train_loss_threshold = .0
 valid_loss_threshold = .0
 loss_function = nn.BCELoss()
-optimizer = optim.Adamax(model.parameters(), lr=2e-6)
+optimizer = optim.Adam(model.parameters(), lr=2e-6)
 
 try:
     for epoch in range(num_epochs):
