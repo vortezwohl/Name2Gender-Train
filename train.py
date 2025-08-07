@@ -10,7 +10,14 @@ from datasets import load_dataset
 from name2gender.model import ENCODER, load_model
 
 model_name = 'name2gender-small'
-model = load_model(model_name)
+model = load_model(model_name, dtype=torch.float32)
+print(model)
+
+
+def encode(text: str):
+    print('\rEncoding:', text, end='')
+    return ENCODER.encode(text)
+
 
 ds = load_dataset("erickrribeiro/gender-by-name")
 train_dataset, test_dataset = ds['train'], ds['test']
@@ -32,7 +39,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 train_ratio = 0.85
 batch_size = 32
 all_texts = male_names + female_names
-text_embeddings = [ENCODER.encode(x) for x in all_texts]
+text_embeddings = [encode(x) for x in all_texts]
 feature_dim = text_embeddings[0].shape[-1]
 dtype = text_embeddings[0].dtype
 labels = ([torch.tensor([1.], dtype=dtype, device=device) for _ in range(len(male_names))]
@@ -104,6 +111,6 @@ except KeyboardInterrupt:
     model.eval()
     with torch.no_grad():
         for i, name in enumerate(test_names):
-            if round(model(ENCODER.encode(name)).item()) == test_genders[i]:
+            if round(model(encode(name)).item()) == test_genders[i]:
                 acc_count += 1.
     print(f'Accuracy: {acc_count / len(test_names):.4f}%', flush=True)
