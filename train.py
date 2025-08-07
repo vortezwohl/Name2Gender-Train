@@ -52,6 +52,15 @@ with open('./data/train_loader.pkl', 'wb') as f:
 with open('./data/valid_loader.pkl', 'wb') as f:
     pickle.dump(valid_dataset_loader, f)
 
+train_step = 0
+valid_step = 0
+acc_train_loss = 0.
+acc_valid_loss = 0.
+eval_interval = 2000
+log_interval = 200
+valid_log_interval = 50
+
+
 writer = SummaryWriter()
 alpha = 1e-4
 rho = 0.2
@@ -64,32 +73,31 @@ optimizer = optim.Adam(model.parameters(), lr=2e-6)
 try:
     for epoch in range(num_epochs):
         model.train()
-        total_loss = 0.0
         for batch_texts, batch_labels in train_dataset_loader:
             outputs = model.forward(batch_texts)
             loss = loss_function(outputs, batch_labels) + model.elastic_net(alpha=alpha, rho=rho)
+            acc_train_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            total_loss += loss.item()
-        if epoch % 3 == 0:
-            total_valid_loss = 0.0
-            for batch_texts, batch_labels in valid_dataset_loader:
-                with torch.no_grad():
-                    model.eval()
+            if train_step % log_interval == 0 and train_step > 0:
+                writer.add_scalar('train/loss', acc_train_loss / log_interval, train_step)
+                print(f'- Train Step {train_step} Loss {acc_train_loss / log_interval}', flush=True)
+                acc_train_loss = 0.
+            train_step += 1
+        if train_step % eval_interval == 0:
+            model.eval()
+            with torch.no_grad():
+                for batch_texts, batch_labels in valid_dataset_loader:
                     outputs = model.forward(batch_texts)
                     loss = loss_function(outputs, batch_labels)
-                    total_valid_loss += loss.item()
-                    model.train()
-            print(f"Epoch {epoch + 1}/{num_epochs} | "
-                  f"Train Loss: {total_loss:.4f} | "
-                  f"Valid Loss: {total_valid_loss:.4f}")
-            if total_valid_loss < valid_loss_threshold:
-                break
-        else:
-            print(f"Epoch {epoch + 1}/{num_epochs} | Train Loss: {total_loss:.4f}")
-        if total_loss < train_loss_threshold:
-            break
+                    acc_valid_loss += loss.item()
+                    if valid_step % valid_log_interval == 0 and valid_step > 0:
+                        writer.add_scalar('valid/loss', acc_valid_loss / valid_log_interval, valid_step)
+                        print(f'- Valid Step {valid_step} Loss {acc_valid_loss / valid_log_interval}', flush=True)
+                        acc_valid_loss = 0.
+                    valid_step += 1
+            model.train()
 except KeyboardInterrupt:
     model.save(f'{int(time.time())}-{model_name}', model_dir='checkpoint')
     acc_count = .0
@@ -98,4 +106,4 @@ except KeyboardInterrupt:
         for i, name in enumerate(test_names):
             if round(model(ENCODER.encode(name)).item()) == test_genders[i]:
                 acc_count += 1.
-    print(f'Accuracy: {acc_count / len(test_names):.4f}%')
+    print(f'Accuracy: {acc_count / len(test_names):.4f}%', flush=True)
