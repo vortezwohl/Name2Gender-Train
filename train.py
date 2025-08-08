@@ -111,7 +111,6 @@ try:
                 writer.add_scalar('train/loss', acc_train_loss / log_interval, train_step)
                 print(f'- Train Step {train_step} Loss {acc_train_loss / log_interval}', flush=True)
                 acc_train_loss = 0.
-            train_step += 1
             if train_step % eval_interval == 0:
                 model.eval()
                 with torch.no_grad():
@@ -135,6 +134,7 @@ try:
                             model.save(f'{int(time.time())}-ACC={acc:.2f}-{model_name}', model_dir='checkpoint')
                         valid_step += 1
                 model.train()
+            train_step += 1
 except KeyboardInterrupt:
     acc_count = .0
     model.eval()
