@@ -7,9 +7,12 @@ from torch import nn, optim
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.tensorboard import SummaryWriter
 from datasets import load_dataset
+from vortezwohl.cache import LRUCache
+from deeplotx.util import sha256
 
 from name2gender.model import ENCODER, load_model
 
+cache = LRUCache(capacity=65536)
 model_name = 'name2gender-small'
 model = load_model(model_name, dtype=torch.float32)
 print(model)
@@ -43,7 +46,11 @@ def encode(text: str, train: bool = True):
     else:
         test_encoding_count += 1
         print(f'\rEncoding ({test_encoding_count}/{len(test_names)}):', text, end='' * 32, flush=True)
-    return ENCODER.encode(text)
+    _hash = sha256(text)
+    if _hash in cache:
+        return cache[_hash]
+    cache[_hash] = ENCODER.encode(text)
+    return cache[_hash]
 
 
 os.makedirs('./data', exist_ok=True)
