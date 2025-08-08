@@ -62,7 +62,7 @@ if os.path.exists('./data/train_loader.pkl') and os.path.exists('./data/valid_lo
 else:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_ratio = 0.9
-    batch_size = 32
+    batch_size = 8
     all_texts = male_names + female_names
     text_embeddings = [encode(x) for x in all_texts]
     feature_dim = text_embeddings[0].shape[-1]
@@ -86,18 +86,16 @@ train_step = 0
 valid_step = 0
 acc_train_loss = 0.
 acc_valid_loss = 0.
-eval_interval = 2000
+eval_interval = 10000
 log_interval = 200
 
 
 writer = SummaryWriter()
-alpha = 1e-4
-rho = 0.2
+alpha = 1e-3
+rho = 0.25
 num_epochs = 500
-train_loss_threshold = .0
-valid_loss_threshold = .0
 loss_function = nn.BCELoss()
-optimizer = optim.Adam(model.parameters(), lr=2e-6)
+optimizer = optim.Adam(model.parameters(), lr=2e-7)
 
 try:
     for epoch in range(num_epochs):
@@ -110,8 +108,6 @@ try:
             loss.backward()
             optimizer.step()
             if train_step % log_interval == 0 and train_step > 0:
-                if acc_train_loss / log_interval <= train_loss_threshold:
-                    raise KeyboardInterrupt
                 writer.add_scalar('train/loss', acc_train_loss / log_interval, train_step)
                 print(f'- Train Step {train_step} Loss {acc_train_loss / log_interval}', flush=True)
                 acc_train_loss = 0.
@@ -124,11 +120,19 @@ try:
                         loss = loss_function(outputs, batch_labels)
                         acc_valid_loss += loss.item()
                         if valid_step % len(valid_dataset_loader) == 0 and valid_step > 0:
-                            if acc_valid_loss / len(valid_dataset_loader) <= valid_loss_threshold:
-                                raise KeyboardInterrupt
                             writer.add_scalar('valid/loss', acc_valid_loss / len(valid_dataset_loader), valid_step)
                             print(f'- Valid Step {valid_step} Loss {acc_valid_loss / len(valid_dataset_loader)}', flush=True)
                             acc_valid_loss = 0.
+                            # eval and save
+                            acc_count = .0
+                            model.eval()
+                            with torch.no_grad():
+                                for i, name in enumerate(test_names):
+                                    if round(model(encode(name, train=False)).item()) == test_genders[i]:
+                                        acc_count += 1.
+                            acc = 100 * (acc_count / len(test_names))
+                            print(f'Accuracy: {acc:.4f}%', flush=True)
+                            model.save(f'{int(time.time())}-ACC={acc:.2f}-{model_name}', model_dir='checkpoint')
                         valid_step += 1
                 model.train()
 except KeyboardInterrupt:
